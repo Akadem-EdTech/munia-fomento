@@ -58,7 +58,7 @@ export async function feriasRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/ferias/:id/postular', guard, async (req) => {
     const { usuarioId, tenantId, emprendedorId } = exigirEmprendedor(req);
     const { id } = z.object({ id: z.string() }).parse(req.params);
-    const body = z.object({ respuestas: z.array(z.object({ preguntaId: z.string(), valor: z.string().nullable().optional() })).default([]) }).parse(req.body);
+    const body = z.object({ respuestas: z.array(z.object({ preguntaId: z.string(), valor: z.string().nullable().optional(), archivoId: z.string().optional() })).default([]) }).parse(req.body);
 
     const feria = await prisma.feria.findFirst({ where: { id, tenantId }, include: { preguntas: true } });
     if (!feria) throw notFound('Feria no encontrada');
@@ -73,7 +73,7 @@ export async function feriasRoutes(app: FastifyInstance): Promise<void> {
     const postulacion = await prisma.postulacion.create({
       data: {
         feriaId: id, emprendedorId, scorePropuesta: sProp, estado: 'PENDIENTE',
-        respuestas: { create: body.respuestas.filter((r) => feria.preguntas.some((p) => p.id === r.preguntaId)).map((r) => ({ preguntaId: r.preguntaId, valor: r.valor ?? null })) },
+        respuestas: { create: body.respuestas.filter((r) => feria.preguntas.some((p) => p.id === r.preguntaId)).map((r) => ({ preguntaId: r.preguntaId, valor: r.valor ?? null, archivoId: r.archivoId ?? null })) },
       },
     });
     await auditar(prisma, { tenantId, usuarioId, accion: 'feria.postular', entidad: 'Postulacion', entidadId: postulacion.id, meta: { feriaId: id, scorePropuesta: sProp } });

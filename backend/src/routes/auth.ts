@@ -14,13 +14,15 @@ const registroSchema = z.object({
   nombre: z.string().min(2),
   rut: z.string().min(3),
   email: z.string().email(),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  // Contraseña sólo si NO viene de ClaveÚnica (que ya autentica por RUT verificado).
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres').optional(),
+  claveUnicaSub: z.string().optional(),
   nombreEmprendimiento: z.string().min(2),
   telefono: z.string().optional(),
   rubroId: z.string().optional(),
   // Consentimiento Ley 21.719: explícito, no pre-marcado. Se exige true en servidor.
   consentimiento: z.literal(true, { errorMap: () => ({ message: 'Debes aceptar el aviso de privacidad para registrarte' }) }),
-});
+}).refine((d) => !!d.password || !!d.claveUnicaSub, { message: 'Falta la contraseña', path: ['password'] });
 
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -43,7 +45,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const data = registroSchema.parse(req.body);
     const tenant = await resolverTenant(req.headers['x-tenant']);
 
-    const passwordHash = await hashPassword(data.password);
+    const passwordHash = data.password ? await hashPassword(data.password) : null;
     try {
       const usuario = await prisma.usuario.create({
         data: {
@@ -52,8 +54,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           nombre: data.nombre,
           email: data.email.toLowerCase(),
           rut: data.rut,
-          authStrategy: 'PASSWORD',
+          authStrategy: data.claveUnicaSub ? 'CLAVE_UNICA' : 'PASSWORD',
           passwordHash,
+          claveUnicaSub: data.claveUnicaSub ?? null,
           emprendedor: {
             create: {
               tenantId: tenant.id,
@@ -135,5 +138,39 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const state = randomBytes(16).toString('hex');
     reply.setCookie('cu_state', state, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
     return reply.redirect(provider.buildAuthorizeUrl(state));
+  });
+
+  // Callback OIDC: intercambia el code, identifica por RUT verificado.
+  app.get('/api/auth/clave-unica/callback', async (req, reply) => {
+    const env = loadEnv();
+    const { code, state } = z.object({ code: z.string(), state: z.string() }).parse(req.query);
+    if (req.cookies['cu_state'] !== state) throw badRequest('Estado inválido (posible CSRF)', 'state_invalido');
+    reply.clearCookie('cu_state', { path: '/' });
+
+    const claims = await new ClaveUnicaProvider().handleCallback(code);
+    const tenant = await resolverTenant(req.headers['x-tenant']);
+
+    // Identidad: por subject de ClaveÚnica o por RUT verificado (anti-duplicados).
+    let usuario = await prisma.usuario.findFirst({ where: { tenantId: tenant.id, OR: [{ claveUnicaSub: claims.sub }, { rut: claims.rut }] } });
+    if (usuario) {
+      if (usuario.claveUnicaSub !== claims.sub) {
+        usuario = await prisma.usuario.update({ where: { id: usuario.id }, data: { claveUnicaSub: claims.sub, authStrategy: 'CLAVE_UNICA', ultimoAcceso: new Date() } });
+      }
+      establecerSesion(reply, usuario.id);
+      return reply.redirect(`${env.WEB_ORIGIN}/app`);
+    }
+    // Sin cuenta: el emprendedor completa su registro (con consentimiento) con el RUT ya verificado.
+    const params = new URLSearchParams({ rut: claims.rut, nombre: claims.nombre, cu: claims.sub });
+    return reply.redirect(`${env.WEB_ORIGIN}/registro?${params.toString()}`);
+  });
+
+  // Config pública (no sensible): estrategia de auth + datos de marca del tenant.
+  app.get('/api/config', async (req) => {
+    const env = loadEnv();
+    const tenant = await resolverTenant(req.headers['x-tenant']).catch(() => null);
+    return {
+      authStrategy: env.AUTH_PRIMARY_STRATEGY,
+      tenant: tenant ? { nombre: tenant.nombre, logoUrl: tenant.logoUrl, colorAccent: tenant.colorAccent } : null,
+    };
   });
 }

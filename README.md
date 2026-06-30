@@ -180,6 +180,20 @@ El adaptador `ResendEmail` ya está implementado; sólo requiere configuración:
 
 > El envío es resiliente: si Resend falla, la acción de negocio (admitir, adjudicar…) **no** se rompe; el error queda en el log.
 
+### Almacenamiento de archivos (adjuntos)
+
+La carga de archivos está operativa (adjuntos de postulación, subida 8 MB máx, JPG/PNG/WebP/PDF):
+
+- **Dev:** `STORAGE_PROVIDER=local` → guarda en `backend/uploads/` y sirve por `GET /api/archivos/:id/contenido`.
+- **Prod (S3-compatible):** `STORAGE_PROVIDER=s3` + `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION`, y `S3_ENDPOINT` (para MinIO/R2/etc.; omítelo para AWS). Subida vía `POST /api/archivos` (multipart).
+
+### ClaveÚnica (OIDC)
+
+Método principal de auth en producción (RUT verificado, anti-duplicados). Activación:
+
+1. `AUTH_PRIMARY_STRATEGY=clave_unica` + `CLAVEUNICA_CLIENT_ID/SECRET/REDIRECT_URI` y los endpoints (`backend/.env.example` trae los de producción).
+2. El login muestra "Ingresar con ClaveÚnica" → `/api/auth/clave-unica/start` → callback `/api/auth/clave-unica/callback`: identifica por subject o RUT; si no existe, deriva a registro con el RUT ya verificado (el emprendedor sólo acepta el consentimiento). El fallback de contraseña sigue disponible.
+
 ---
 
 ## Comandos útiles

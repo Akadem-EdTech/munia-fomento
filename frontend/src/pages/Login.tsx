@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../auth/auth';
@@ -7,6 +8,8 @@ import { useAuth } from '../auth/auth';
 export function Login() {
   const nav = useNavigate();
   const { refrescar } = useAuth();
+  const { data: config } = useQuery({ queryKey: ['config'], queryFn: () => api.get<{ authStrategy: string }>('/api/config') });
+  const claveUnica = config?.authStrategy === 'clave_unica';
   const [modoFuncionario, setModo] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,6 +40,13 @@ export function Login() {
         <div className="auth-sub">{modoFuncionario ? 'Acceso funcionarios municipales' : 'Portal del emprendedor'}</div>
 
         {error && <div className="alert alert-bad" style={{ marginBottom: '1rem' }}><Icon name="info" />{error}</div>}
+
+        {claveUnica && (
+          <>
+            <a className="btn-p btn-block" href="/api/auth/clave-unica/start"><Icon name="shield" /> Ingresar con ClaveÚnica</a>
+            <div className="divider">o con tu correo</div>
+          </>
+        )}
 
         <form onSubmit={enviar}>
           <div className="field">

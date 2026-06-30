@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
 import { loadEnv } from './env.js';
 import { AppError } from './lib/errors.js';
@@ -14,6 +15,7 @@ import { capacitacionRoutes } from './routes/capacitacion.js';
 import { fondosRoutes } from './routes/fondos.js';
 import { fondosGestionRoutes } from './routes/fondos-gestion.js';
 import { tenantRoutes } from './routes/tenant.js';
+import { archivosRoutes } from './routes/archivos.js';
 
 /** Construye la app Fastify (sin escuchar) — reutilizable en tests. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -21,6 +23,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: env.NODE_ENV !== 'test' });
 
   await app.register(cors, { origin: env.WEB_ORIGIN, credentials: true });
+  await app.register(multipart, { limits: { fileSize: 8 * 1024 * 1024 } });
   await app.register(authPlugin);
 
   // Manejador de errores uniforme (mensajes en español, sin filtrar internos).
@@ -47,6 +50,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(fondosRoutes);
   await app.register(fondosGestionRoutes);
   await app.register(tenantRoutes);
+  await app.register(archivosRoutes);
 
   return app;
 }

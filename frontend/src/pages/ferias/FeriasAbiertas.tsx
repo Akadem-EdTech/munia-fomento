@@ -8,9 +8,22 @@ function Postular({ feriaId, onClose }: { feriaId: string; onClose: () => void }
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ['feria', feriaId], queryFn: () => api.get<{ feria: FeriaDetalle }>(`/api/ferias/${feriaId}`) });
   const [resp, setResp] = useState<Record<string, string>>({});
+  const [adjuntos, setAdjuntos] = useState<Record<string, { id: string; nombre: string }>>({});
+  const [subiendo, setSubiendo] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  const subir = async (preguntaId: string, file: File) => {
+    setError(''); setSubiendo(preguntaId);
+    try {
+      const r = await api.upload<{ archivo: { id: string; nombre: string } }>('/api/archivos', file);
+      setAdjuntos((a) => ({ ...a, [preguntaId]: r.archivo }));
+      setResp((s) => ({ ...s, [preguntaId]: r.archivo.nombre }));
+    } catch (e) { setError(e instanceof ApiError ? e.message : 'No se pudo subir el archivo'); }
+    finally { setSubiendo(null); }
+  };
+
   const enviar = useMutation({
-    mutationFn: () => api.post(`/api/ferias/${feriaId}/postular`, { respuestas: Object.entries(resp).map(([preguntaId, valor]) => ({ preguntaId, valor })) }),
+    mutationFn: () => api.post(`/api/ferias/${feriaId}/postular`, { respuestas: Object.entries(resp).map(([preguntaId, valor]) => ({ preguntaId, valor, archivoId: adjuntos[preguntaId]?.id })) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['ferias-abiertas'] }); qc.invalidateQueries({ queryKey: ['mis-postulaciones'] }); onClose(); },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'No se pudo postular'),
   });
@@ -37,7 +50,11 @@ function Postular({ feriaId, onClose }: { feriaId: string; onClose: () => void }
                 {p.tipo === 'SELECCION' && (
                   <select value={resp[p.id] ?? ''} onChange={(e) => setResp({ ...resp, [p.id]: e.target.value })}><option value="">— Selecciona —</option>{p.opciones.map((o) => <option key={o} value={o}>{o}</option>)}</select>
                 )}
-                {p.tipo === 'ADJUNTO' && <div className="alert alert-info"><Icon name="doc" />Podrás adjuntar archivos cuando habilitemos la carga (próximamente).</div>}
+                {p.tipo === 'ADJUNTO' && (
+                  adjuntos[p.id]
+                    ? <div className="alert alert-info"><Icon name="check" />{adjuntos[p.id].nombre} <button className="btn-g btn-xs" style={{ marginLeft: 'auto' }} onClick={() => { setAdjuntos((a) => { const n = { ...a }; delete n[p.id]; return n; }); setResp((s) => { const n = { ...s }; delete n[p.id]; return n; }); }}>Quitar</button></div>
+                    : <label className="btn-g btn-sm" style={{ cursor: 'pointer' }}>{subiendo === p.id ? <span className="spinner" /> : <><Icon name="download" style={{ transform: 'rotate(180deg)' }} /> Subir archivo (JPG, PNG o PDF)</>}<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && subir(p.id, e.target.files[0])} /></label>
+                )}
               </div>
             ))}
             <div className="modal-actions">

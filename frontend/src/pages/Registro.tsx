@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../auth/auth';
@@ -7,7 +7,9 @@ import { useAuth } from '../auth/auth';
 export function Registro() {
   const nav = useNavigate();
   const { refrescar } = useAuth();
-  const [f, setF] = useState({ nombre: '', rut: '', email: '', password: '', nombreEmprendimiento: '', telefono: '' });
+  const [params] = useSearchParams();
+  const claveUnicaSub = params.get('cu') ?? undefined; // viene del callback de ClaveÚnica
+  const [f, setF] = useState({ nombre: params.get('nombre') ?? '', rut: params.get('rut') ?? '', email: '', password: '', nombreEmprendimiento: '', telefono: '' });
   const [consentimiento, setConsent] = useState(false); // NO pre-marcado
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -20,7 +22,7 @@ export function Registro() {
     if (!consentimiento) { setError('Debes aceptar el aviso de privacidad para registrarte.'); return; }
     setCargando(true);
     try {
-      await api.post('/api/auth/registro', { ...f, consentimiento });
+      await api.post('/api/auth/registro', { ...f, password: f.password || undefined, claveUnicaSub, consentimiento });
       refrescar();
       nav('/app');
     } catch (err) {
@@ -44,14 +46,16 @@ export function Registro() {
         <form onSubmit={enviar}>
           <div className="grid g2">
             <div className="field"><label>Nombre completo</label><input value={f.nombre} onChange={set('nombre')} required /></div>
-            <div className="field"><label>RUT</label><input value={f.rut} onChange={set('rut')} required placeholder="12.345.678-9" /></div>
+            <div className="field"><label>RUT{claveUnicaSub && ' · verificado'}</label><input value={f.rut} onChange={set('rut')} required placeholder="12.345.678-9" readOnly={!!claveUnicaSub} /></div>
           </div>
           <div className="field"><label>Nombre de tu emprendimiento</label><input value={f.nombreEmprendimiento} onChange={set('nombreEmprendimiento')} required /></div>
           <div className="grid g2">
             <div className="field"><label>Correo electrónico</label><input type="email" value={f.email} onChange={set('email')} required /></div>
             <div className="field"><label>Teléfono (opcional)</label><input value={f.telefono} onChange={set('telefono')} placeholder="+56 9 ..." /></div>
           </div>
-          <div className="field"><label>Contraseña</label><input type="password" value={f.password} onChange={set('password')} required minLength={8} placeholder="mínimo 8 caracteres" /></div>
+          {claveUnicaSub
+            ? <div className="alert alert-info" style={{ marginBottom: '1rem' }}><Icon name="shield" />Tu identidad fue verificada con ClaveÚnica. No necesitas contraseña.</div>
+            : <div className="field"><label>Contraseña</label><input type="password" value={f.password} onChange={set('password')} required minLength={8} placeholder="mínimo 8 caracteres" /></div>}
 
           <label className="checkbox" style={{ margin: '1rem 0' }}>
             <input type="checkbox" checked={consentimiento} onChange={(e) => setConsent(e.target.checked)} />

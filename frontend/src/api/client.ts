@@ -20,8 +20,19 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   return data as T;
 }
 
+async function upload<T>(url: string, file: File): Promise<T> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(url, { method: 'POST', credentials: 'include', body: fd });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new ApiError(res.status, data?.mensaje ?? 'Error al subir', data?.error);
+  return data as T;
+}
+
 export const api = {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T>(url: string, body?: unknown) => request<T>('POST', url, body),
   patch: <T>(url: string, body?: unknown) => request<T>('PATCH', url, body),
+  upload,
 };
