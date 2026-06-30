@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest, preHandlerHookHandler } from 'fastify';
+import fp from 'fastify-plugin';
 import cookie from '@fastify/cookie';
 import { prisma } from '../db.js';
 import { loadEnv, isProd } from '../env.js';
@@ -39,13 +40,16 @@ async function cargarPrincipal(req: FastifyRequest): Promise<Principal | null> {
   };
 }
 
-export async function authPlugin(app: FastifyInstance): Promise<void> {
+// fastify-plugin: NO encapsular — los decoradores de cookie y el hook deben
+// aplicar al scope raíz donde se registran las rutas (si no, reply.setCookie
+// no existiría en los handlers).
+export const authPlugin = fp(async (app: FastifyInstance): Promise<void> => {
   await app.register(cookie, { secret: loadEnv().SESSION_SECRET });
   app.decorateRequest('principal', null);
   app.addHook('onRequest', async (req) => {
     req.principal = await cargarPrincipal(req);
   });
-}
+});
 
 export function establecerSesion(reply: FastifyReply, usuarioId: string): void {
   reply.setCookie(SESSION_COOKIE, usuarioId, {
