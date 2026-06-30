@@ -1,0 +1,679 @@
+// ============================================================================
+// MunIA Fomento — Modelo de datos multi-tenant
+// Producto, no cliente: el municipio (Tenant) es CONFIGURACIÓN, nunca código.
+// Toda entidad de negocio cuelga de tenantId. Toda acción sensible se audita.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TENANT (municipio) + configuración
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id             String   @id @default(cuid())
+  slug           String   @unique // identificador en URL/subdominio (ej: "demo")
+  nombre         String // nombre visible del municipio (config, NO hardcode)
+  logoUrl        String?
+  colorAccent    String? // override opcional del acento de marca
+  dominioCorreo  String? // dominio institucional de funcionarios (ej: imunicipio.cl)
+  // Módulos habilitados para este municipio
+  modulosActivos Modulo[] @default([FERIAS, CAPACITACION, FONDOS])
+  // Versión vigente del aviso de privacidad (Ley 21.719)
+  consentVersion String   @default("1.0")
+  config         Json     @default("{}") // extensible: textos, flags, etc.
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  usuarios       Usuario[]
+  emprendedores  Emprendedor[]
+  rubros         Rubro[]
+  ferias         Feria[]
+  cursos         Curso[]
+  fondos         Fondo[]
+  plantillas     PlantillaNotificacion[]
+  notificaciones Notificacion[]
+  auditLogs      AuditLog[]
+  archivos       Archivo[]
+
+  @@map("tenants")
+}
+
+// Catálogo de rubros: alias administrable de cara al usuario + maestro estándar
+// por debajo para comparabilidad inter-comunal. NO se expone CIIU/SII al usuario.
+model Rubro {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  codigoMaestro String // clave estándar compartida entre comunas (ej: "GASTRONOMIA")
+  alias         String // etiqueta de cara al usuario (ej: "Cocinería")
+  color         String   @default("#2196F3")
+  orden         Int      @default(0)
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  emprendedores Emprendedor[]
+  ferias        FeriaRubro[]
+  cursos        Curso[]
+
+  @@unique([tenantId, codigoMaestro])
+  @@index([tenantId])
+  @@map("rubros")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  USUARIOS, ROLES Y ACCESO
+//  El acceso se asigna, no se toma: el emprendedor se auto-inscribe (puerta
+//  abierta); el funcionario es dado de alta por el administrador (puerta asignada).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TipoUsuario {
+  EMPRENDEDOR
+  FUNCIONARIO
+}
+
+enum RolFuncionario {
+  ADMINISTRADOR // crea/configura/gestiona en sus módulos + gestión de usuarios
+  EVALUADOR // sólo evalúa lo asignado, scope acotado por evento
+  JEFATURA // sólo lectura, sólo dashboards (DIDECO/alcaldía)
+}
+
+enum Modulo {
+  FERIAS
+  CAPACITACION
+  FONDOS
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  INVITADO // funcionario dado de alta, pendiente de activar su cuenta
+  SUSPENDIDO
+}
+
+enum AuthStrategy {
+  CLAVE_UNICA
+  PASSWORD
+}
+
+model Usuario {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tipo            TipoUsuario
+  nombre          String
+  email           String
+  // Identidad verificada. RUT es la llave única anti-duplicados (fondos públicos).
+  rut             String?
+  estado          EstadoUsuario @default(ACTIVO)
+  // Autenticación intercambiable
+  authStrategy    AuthStrategy  @default(PASSWORD)
+  passwordHash    String? // sólo PASSWORD (fallback dev); hash argon2
+  claveUnicaSub   String? // subject OIDC de ClaveÚnica
+  // Token de invitación/activación (funcionarios) — hash, nunca en claro
+  inviteTokenHash String?
+  inviteExpiresAt DateTime?
+  ultimoAcceso    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Perfil de emprendedor (1:1) cuando tipo = EMPRENDEDOR
+  emprendedor Emprendedor?
+  // Atributos de funcionario cuando tipo = FUNCIONARIO
+  funcionario Funcionario?
+
+  notificaciones Notificacion[]
+  auditLogs      AuditLog[]
+  archivos       Archivo[]
+
+  // email único por tenant; rut único por tenant cuando está presente
+  @@unique([tenantId, email])
+  @@unique([tenantId, rut])
+  @@index([tenantId, tipo])
+  @@map("usuarios")
+}
+
+// Atributos del funcionario municipal: rol + módulos con acceso (rol × módulo).
+// El control de acceso resultante se valida en backend en CADA endpoint.
+model Funcionario {
+  id        String         @id @default(cuid())
+  usuarioId String         @unique
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  cargo     String?
+  rol       RolFuncionario
+  // Subconjunto de módulos a los que accede (ej: "Encargado de Fondos" = solo FONDOS)
+  modulos   Modulo[]       @default([])
+
+  evaluaciones      EvaluadorFeria[]
+  ferias            Feria[]             @relation("FeriaCreador")
+  postulacionesEval EvaluacionTerreno[]
+
+  @@map("funcionarios")
+}
+
+// Perfil persistente del emprendedor: una sola identidad atravesando todos los
+// módulos. Es el corazón del valor de plataforma.
+model Emprendedor {
+  id                   String    @id @default(cuid())
+  usuarioId            String    @unique
+  usuario              Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tenantId             String
+  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombreEmprendimiento String
+  descripcion          String?
+  telefono             String?
+  localidad            String?
+  rubroId              String?
+  rubro                Rubro?    @relation(fields: [rubroId], references: [id])
+  etapa                String? // ej: "idea", "menos_2_anios", "consolidado" (para match de fondos)
+  genero               String? // opcional, sólo si aplica a match (ej: SERNAMEG)
+  // ── Score de desempeño (reputación acumulada) — persistente, crece feria a feria
+  repScore             Int       @default(0) // 0..100. Novato = 0 → "sin historial aún"
+  feriasCumplidas      Int       @default(0)
+  feriasTotales        Int       @default(0)
+  // Documentos declarados (resolución sanitaria, inicio actividades, etc.)
+  documentos           String[]  @default([])
+  // Consentimiento Ley 21.719 (explícito, no pre-marcado)
+  consentVersion       String?
+  consentFecha         DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  postulaciones       Postulacion[]
+  evaluacionesTerreno EvaluacionTerreno[]
+  reportes            ReporteEmprendedor[]
+  inscripciones       Inscripcion[]
+  asistencias         Asistencia[]
+  certificados        Certificado[]
+  postulacionesFondo  PostulacionFondo[]
+  scoreEventos        ScoreEvento[]
+  solicitudesArco     SolicitudArco[]
+
+  @@index([tenantId, rubroId])
+  @@map("emprendedores")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MÓDULO FERIAS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EstadoFeria {
+  BORRADOR
+  ABIERTA
+  EN_EVALUACION
+  CERRADA
+}
+
+model Feria {
+  id               String       @id @default(cuid())
+  tenantId         String
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre           String
+  objetivo         String?
+  estado           EstadoFeria  @default(BORRADOR)
+  fecha            String? // texto libre legible ("14–15 Mar 2026") + fechas estructuradas
+  fechaInicio      DateTime?
+  fechaFin         DateTime?
+  ubicacion        String?
+  cupos            Int          @default(0)
+  // Perilla de ponderación (config por feria): propuesta vs reputación. Suman 100.
+  pesoProp         Int          @default(50)
+  pesoRep          Int          @default(50)
+  // Métricas de cierre (narrativas) — autoreportadas/agregadas, no inventadas
+  ventasReportadas String?
+  publicoEstimado  String?
+  creadoPorId      String?
+  creadoPor        Funcionario? @relation("FeriaCreador", fields: [creadoPorId], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  rubros        FeriaRubro[]
+  preguntas     PreguntaFeria[]
+  postulaciones Postulacion[]
+  evaluadores   EvaluadorFeria[]
+  evaluaciones  EvaluacionTerreno[]
+  reportes      ReporteEmprendedor[]
+
+  @@index([tenantId, estado])
+  @@map("ferias")
+}
+
+model FeriaRubro {
+  feriaId String
+  feria   Feria  @relation(fields: [feriaId], references: [id], onDelete: Cascade)
+  rubroId String
+  rubro   Rubro  @relation(fields: [rubroId], references: [id], onDelete: Cascade)
+
+  @@id([feriaId, rubroId])
+  @@map("feria_rubros")
+}
+
+enum TipoPregunta {
+  TEXTO
+  SELECCION
+  NUMERO
+  SINO
+  ADJUNTO
+}
+
+// Bloque configurable del formulario híbrido (3-6 preguntas de tipos predefinidos).
+// NO es un form builder libre: tipos acotados + núcleo fijo preservan perfil y scoring.
+model PreguntaFeria {
+  id        String       @id @default(cuid())
+  feriaId   String
+  feria     Feria        @relation(fields: [feriaId], references: [id], onDelete: Cascade)
+  texto     String
+  tipo      TipoPregunta
+  // Si es puntuable, alimenta el score de postulación con este peso relativo.
+  puntuable Boolean      @default(false)
+  peso      Int          @default(0)
+  opciones  String[]     @default([]) // para SELECCION
+  orden     Int          @default(0)
+
+  respuestas RespuestaPostulacion[]
+
+  @@index([feriaId])
+  @@map("preguntas_feria")
+}
+
+enum EstadoPostulacion {
+  PENDIENTE
+  ADMITIDA
+  RECHAZADA
+  LISTA_ESPERA
+}
+
+model Postulacion {
+  id             String            @id @default(cuid())
+  feriaId        String
+  feria          Feria             @relation(fields: [feriaId], references: [id], onDelete: Cascade)
+  emprendedorId  String
+  emprendedor    Emprendedor       @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  // Score de postulación (admisión): efímero, por feria. Fit propuesta↔feria.
+  scorePropuesta Int               @default(0)
+  estado         EstadoPostulacion @default(PENDIENTE)
+  motivoEstado   String? // razón de admisión/rechazo (defendibilidad)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  respuestas RespuestaPostulacion[]
+
+  @@unique([feriaId, emprendedorId])
+  @@index([feriaId, estado])
+  @@map("postulaciones")
+}
+
+model RespuestaPostulacion {
+  id            String        @id @default(cuid())
+  postulacionId String
+  postulacion   Postulacion   @relation(fields: [postulacionId], references: [id], onDelete: Cascade)
+  preguntaId    String
+  pregunta      PreguntaFeria @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+  valor         String? // respuesta serializada (texto, opción, número, "si"/"no")
+  archivoId     String? // adjunto cuando tipo = ADJUNTO
+  archivo       Archivo?      @relation(fields: [archivoId], references: [id])
+
+  @@unique([postulacionId, preguntaId])
+  @@map("respuestas_postulacion")
+}
+
+// Evaluadores asignados por feria específica (scope por evento).
+model EvaluadorFeria {
+  feriaId       String
+  feria         Feria       @relation(fields: [feriaId], references: [id], onDelete: Cascade)
+  funcionarioId String
+  funcionario   Funcionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+  asignadoAt    DateTime    @default(now())
+
+  @@id([feriaId, funcionarioId])
+  @@map("evaluadores_feria")
+}
+
+// Evaluación en terreno (3 capas). Capa 1 se guarda al instante de cada marca.
+model EvaluacionTerreno {
+  id               String       @id @default(cuid())
+  feriaId          String
+  feria            Feria        @relation(fields: [feriaId], references: [id], onDelete: Cascade)
+  emprendedorId    String
+  emprendedor      Emprendedor  @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  evaluadorId      String?
+  evaluador        Funcionario? @relation(fields: [evaluadorId], references: [id])
+  // Capa 1 — cumplimiento: checklist binario (clave → cumplió). Piso del score.
+  cumplimiento     Json         @default("{}") // { asistio:true, puntual:true, ... }
+  // Capa 3 — calidad: estrellas opcionales/selectivas (1..5)
+  calidadEstrellas Int?
+  observaciones    String?
+  completada       Boolean      @default(false)
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([feriaId, emprendedorId])
+  @@index([feriaId])
+  @@map("evaluaciones_terreno")
+}
+
+// Capa 2 — comercial: autoreportada por el emprendedor (post-feria).
+// Ventas = SEÑAL de participación + dato narrativo. NUNCA cifra dura en el ranking.
+model ReporteEmprendedor {
+  id               String      @id @default(cuid())
+  feriaId          String
+  feria            Feria       @relation(fields: [feriaId], references: [id], onDelete: Cascade)
+  emprendedorId    String
+  emprendedor      Emprendedor @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  participo        Boolean     @default(true)
+  ventasReportadas Int? // autoreportado, inflable → sólo narrativo
+  comentario       String?
+  createdAt        DateTime    @default(now())
+
+  @@unique([feriaId, emprendedorId])
+  @@map("reportes_emprendedor")
+}
+
+// Bitácora del score de desempeño: cómo cada feria modificó la reputación.
+model ScoreEvento {
+  id            String      @id @default(cuid())
+  emprendedorId String
+  emprendedor   Emprendedor @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  origen        String // "feria", "curso", etc.
+  origenId      String?
+  delta         Int // variación aplicada al repScore
+  motivo        String
+  createdAt     DateTime    @default(now())
+
+  @@index([emprendedorId])
+  @@map("score_eventos")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MÓDULO CAPACITACIÓN
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ModalidadCurso {
+  PRESENCIAL
+  ONLINE
+}
+
+enum EstadoInscripcion {
+  INSCRITO
+  LISTA_ESPERA
+  RETIRADO
+}
+
+model Curso {
+  id              String         @id @default(cuid())
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre          String
+  descripcion     String?
+  modalidad       ModalidadCurso
+  cupos           Int            @default(0)
+  fechaInicio     DateTime?
+  fechaFin        DateTime?
+  rubroObjetivoId String?
+  rubroObjetivo   Rubro?         @relation(fields: [rubroObjetivoId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  inscripciones Inscripcion[]
+  sesiones      SesionCurso[]
+  certificados  Certificado[]
+
+  @@index([tenantId])
+  @@map("cursos")
+}
+
+model Inscripcion {
+  id            String            @id @default(cuid())
+  cursoId       String
+  curso         Curso             @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  emprendedorId String
+  emprendedor   Emprendedor       @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  estado        EstadoInscripcion @default(INSCRITO)
+  createdAt     DateTime          @default(now())
+
+  @@unique([cursoId, emprendedorId])
+  @@map("inscripciones")
+}
+
+model SesionCurso {
+  id      String    @id @default(cuid())
+  cursoId String
+  curso   Curso     @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  fecha   DateTime?
+  titulo  String?
+  orden   Int       @default(0)
+
+  asistencias Asistencia[]
+
+  @@map("sesiones_curso")
+}
+
+model Asistencia {
+  id            String      @id @default(cuid())
+  sesionId      String
+  sesion        SesionCurso @relation(fields: [sesionId], references: [id], onDelete: Cascade)
+  emprendedorId String
+  emprendedor   Emprendedor @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  presente      Boolean     @default(false)
+  registradoAt  DateTime    @default(now()) // guardado instantáneo desde el celular
+
+  @@unique([sesionId, emprendedorId])
+  @@map("asistencias")
+}
+
+model Certificado {
+  id            String      @id @default(cuid())
+  cursoId       String
+  curso         Curso       @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  emprendedorId String
+  emprendedor   Emprendedor @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  archivoId     String?
+  archivo       Archivo?    @relation(fields: [archivoId], references: [id])
+  emitidoAt     DateTime    @default(now())
+
+  @@unique([cursoId, emprendedorId])
+  @@map("certificados")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MÓDULO FONDOS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum OrigenFondo {
+  MUNICIPAL
+  EXTERNO // CORFO, SERNAMEG, etc. — catálogo curado
+}
+
+enum EstadoFondo {
+  BORRADOR
+  ABIERTA
+  CERRADA
+}
+
+model Fondo {
+  id             String      @id @default(cuid())
+  tenantId       String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre         String
+  organismo      String // entidad que financia
+  origen         OrigenFondo @default(MUNICIPAL)
+  estado         EstadoFondo @default(BORRADOR)
+  descripcion    String?
+  montoMax       Int?
+  moneda         String      @default("CLP")
+  fechaCierre    DateTime?
+  // Criterios de match que alimentan al asistente: rubros elegibles, etapa, género
+  criteriosMatch Json        @default("{}") // { rubros:[], etapa:[], genero:[], localidad:[] }
+  // Requisitos checkeables contra el perfil ("cumples 2 de 4")
+  requisitos     Json        @default("[]") // [{ clave, etiqueta, campoPerfil }]
+  faq            Json        @default("[]") // [{ pregunta, respuesta }]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  postulaciones PostulacionFondo[]
+
+  @@index([tenantId, estado])
+  @@map("fondos")
+}
+
+enum EstadoPostulacionFondo {
+  POSTULADA
+  EN_EVALUACION
+  ADJUDICADA
+  RECHAZADA
+}
+
+model PostulacionFondo {
+  id              String                 @id @default(cuid())
+  fondoId         String
+  fondo           Fondo                  @relation(fields: [fondoId], references: [id], onDelete: Cascade)
+  emprendedorId   String
+  emprendedor     Emprendedor            @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  estado          EstadoPostulacionFondo @default(POSTULADA)
+  proyecto        String? // proyecto de inversión (apoyado por IA)
+  montoSolicitado Int?
+  motivoEstado    String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([fondoId, emprendedorId])
+  @@index([fondoId, estado])
+  @@map("postulaciones_fondo")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  NOTIFICACIONES (arquitectura desacoplada por eventos)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EventoNotificacion {
+  POSTULACION_RECIBIDA
+  EMPRENDEDOR_ADMITIDO
+  EMPRENDEDOR_RECHAZADO
+  EMPRENDEDOR_LISTA_ESPERA
+  FERIA_RECORDATORIO_48H
+  SOLICITUD_AUTOREPORTE
+  INSCRIPCION_CURSO_CONFIRMADA
+  CONVOCATORIA_ABIERTA
+  FONDO_ADJUDICADO
+  FUNCIONARIO_INVITADO
+}
+
+enum CanalNotificacion {
+  EMAIL
+  WHATSAPP // no en MVP; el enum deja el canal listo para enchufar
+  IN_APP
+}
+
+// Plantillas editables por el admin, con variables {nombre}, {feria}, {fecha}...
+model PlantillaNotificacion {
+  id        String             @id @default(cuid())
+  tenantId  String
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  evento    EventoNotificacion
+  canal     CanalNotificacion  @default(EMAIL)
+  asunto    String
+  cuerpo    String // con variables {var}
+  activa    Boolean            @default(true)
+  updatedAt DateTime           @updatedAt
+
+  @@unique([tenantId, evento, canal])
+  @@map("plantillas_notificacion")
+}
+
+// Centro de notificaciones in-app (campana). Contextual al rol.
+model Notificacion {
+  id        String             @id @default(cuid())
+  tenantId  String
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  evento    EventoNotificacion
+  titulo    String
+  cuerpo    String
+  leida     Boolean            @default(false)
+  meta      Json               @default("{}")
+  createdAt DateTime           @default(now())
+
+  @@index([usuarioId, leida])
+  @@map("notificaciones")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ARCHIVOS (S3-compatible; metadatos en BD, binarios fuera)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Archivo {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subidoPorId String?
+  subidoPor   Usuario? @relation(fields: [subidoPorId], references: [id])
+  storageKey  String // clave en el bucket / ruta local
+  nombre      String
+  mime        String
+  tamano      Int
+  createdAt   DateTime @default(now())
+
+  respuestas   RespuestaPostulacion[]
+  certificados Certificado[]
+
+  @@index([tenantId])
+  @@map("archivos")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  AUDITORÍA — toda acción sensible firmada (usuario + timestamp + tenant)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  accion    String // ej: "feria.admitir", "usuario.suspender", "fondo.adjudicar"
+  entidad   String // ej: "Postulacion"
+  entidadId String?
+  meta      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([entidad, entidadId])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DERECHOS ARCO (Ley 21.719) — operativos desde el portal del emprendedor
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TipoArco {
+  ACCESO
+  RECTIFICACION
+  EXPORTACION
+  ELIMINACION
+}
+
+enum EstadoArco {
+  PENDIENTE
+  RESUELTA
+  RECHAZADA
+}
+
+model SolicitudArco {
+  id            String      @id @default(cuid())
+  emprendedorId String
+  emprendedor   Emprendedor @relation(fields: [emprendedorId], references: [id], onDelete: Cascade)
+  tipo          TipoArco
+  estado        EstadoArco  @default(PENDIENTE)
+  detalle       String?
+  createdAt     DateTime    @default(now())
+  resueltaAt    DateTime?
+
+  @@index([emprendedorId])
+  @@map("solicitudes_arco")
+}
