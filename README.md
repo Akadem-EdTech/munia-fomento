@@ -157,6 +157,29 @@ Tests: `npm test` corre la matriz de acceso (`src/auth/access.test.ts`), el moto
 
 Cada uno se selecciona por variable de entorno. La plataforma es standalone y se integra a MunIA core vía estos adaptadores y APIs REST propias, sin acoplarse a su BPMN/ticketing.
 
+### Conectar Resend (email real)
+
+El adaptador `ResendEmail` ya está implementado; sólo requiere configuración:
+
+1. Crea una cuenta en [resend.com](https://resend.com) y obtén una **API key** (`re_...`).
+2. **Dominio remitente:**
+   - *Para producción:* verifica tu dominio en Resend (agrega los registros DNS que indica) y usa un `from` de ese dominio, ej. `MunIA Fomento <no-reply@tudominio.cl>`.
+   - *Para probar rápido:* usa `EMAIL_FROM="MunIA Fomento <onboarding@resend.dev>"`. El dominio de prueba de Resend **sólo permite enviar al correo con que te registraste**.
+3. En `backend/.env`:
+   ```bash
+   EMAIL_PROVIDER="resend"
+   RESEND_API_KEY="re_xxxxxxxx"
+   EMAIL_FROM="MunIA Fomento <no-reply@tudominio.cl>"
+   ```
+4. **Prueba el envío** sin levantar el servidor:
+   ```bash
+   cd backend && npm run email:test -- tu@correo.cl
+   ```
+   Imprime el `id` del mensaje de Resend si todo está bien, o el error del API si falta algo.
+5. Reinicia la API. Toda notificación por evento (admisión, inscripción, fondo adjudicado, etc.) saldrá por Resend automáticamente — el bus de notificaciones no cambia, sólo el canal.
+
+> El envío es resiliente: si Resend falla, la acción de negocio (admitir, adjudicar…) **no** se rompe; el error queda en el log.
+
 ---
 
 ## Comandos útiles

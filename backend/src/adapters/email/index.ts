@@ -25,9 +25,15 @@ class ResendEmail implements EmailProvider {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: this.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html }),
+      // Resend exige un from con dominio verificado. text + html opcional.
+      body: JSON.stringify({ from: this.from, to: [msg.to], subject: msg.subject, text: msg.text, ...(msg.html ? { html: msg.html } : {}) }),
     });
-    if (!res.ok) throw new Error(`Resend respondió ${res.status}: ${await res.text()}`);
+    const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
+    if (!res.ok) {
+      throw new Error(`Resend ${res.status} (${body.name ?? 'error'}): ${body.message ?? 'fallo desconocido'}`);
+    }
+    // eslint-disable-next-line no-console
+    console.log(`📧 [email:resend] → ${msg.to} · id ${body.id ?? '(sin id)'}`);
   }
 }
 

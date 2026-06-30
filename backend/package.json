@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
+    "email:test": "tsx scripts/test-email.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
