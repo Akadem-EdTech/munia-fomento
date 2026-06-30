@@ -6,6 +6,7 @@ import { auditar } from '../lib/audit.js';
 import { requireAcceso } from '../plugins/auth.js';
 import { soloEmprendedor } from '../auth/access.js';
 import { exigirEmprendedor } from '../lib/actores.js';
+import { notificar } from '../lib/notify.js';
 import { scorePropuesta, type PreguntaPuntuable } from '../domain/postulacion.js';
 
 /** Traduce el criterio de selección a lenguaje del emprendedor. */
@@ -76,6 +77,7 @@ export async function feriasRoutes(app: FastifyInstance): Promise<void> {
       },
     });
     await auditar(prisma, { tenantId, usuarioId, accion: 'feria.postular', entidad: 'Postulacion', entidadId: postulacion.id, meta: { feriaId: id, scorePropuesta: sProp } });
+    await notificar(prisma, { tenantId, evento: 'POSTULACION_RECIBIDA', usuarioId, variables: { feria: feria.nombre } });
     return { postulacion: { id: postulacion.id, estado: postulacion.estado } };
   });
 

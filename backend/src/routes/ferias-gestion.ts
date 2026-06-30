@@ -6,6 +6,7 @@ import { auditar } from '../lib/audit.js';
 import { requireAcceso } from '../plugins/auth.js';
 import { operarModulo, verModulo, evaluarEnModulo } from '../auth/access.js';
 import { exigirFuncionario } from '../lib/actores.js';
+import { notificar } from '../lib/notify.js';
 import { rankear, desgloseCombinado, actualizarReputacion } from '../domain/scoring.js';
 import { metricasOperativas, distribucionPor, metricasNarrativas } from '../domain/dashboards.js';
 
@@ -126,10 +127,12 @@ export async function feriasGestionRoutes(app: FastifyInstance): Promise<void> {
     const { usuarioId, tenantId } = await exigirFuncionario(req);
     const { id } = z.object({ id: z.string() }).parse(req.params);
     const { decision, motivo } = z.object({ decision: z.enum(['ADMITIDA', 'RECHAZADA', 'LISTA_ESPERA']), motivo: z.string().max(300).optional() }).parse(req.body);
-    const post = await prisma.postulacion.findFirst({ where: { id, feria: { tenantId } } });
+    const post = await prisma.postulacion.findFirst({ where: { id, feria: { tenantId } }, include: { feria: true, emprendedor: { select: { usuario: { select: { id: true } } } } } });
     if (!post) throw notFound('Postulación no encontrada');
     await prisma.postulacion.update({ where: { id }, data: { estado: decision, motivoEstado: motivo } });
     await auditar(prisma, { tenantId, usuarioId, accion: `feria.${decision.toLowerCase()}`, entidad: 'Postulacion', entidadId: id, meta: { motivo } });
+    const evento = ({ ADMITIDA: 'EMPRENDEDOR_ADMITIDO', RECHAZADA: 'EMPRENDEDOR_RECHAZADO', LISTA_ESPERA: 'EMPRENDEDOR_LISTA_ESPERA' } as const)[decision];
+    await notificar(prisma, { tenantId, evento, usuarioId: post.emprendedor.usuario.id, variables: { feria: post.feria.nombre, fecha: post.feria.fecha ?? '', ubicacion: post.feria.ubicacion ?? '' } });
     return { ok: true };
   });
 

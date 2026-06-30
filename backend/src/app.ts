@@ -9,6 +9,7 @@ import { usuariosRoutes } from './routes/usuarios.js';
 import { emprendedorRoutes } from './routes/emprendedor.js';
 import { feriasRoutes } from './routes/ferias.js';
 import { feriasGestionRoutes } from './routes/ferias-gestion.js';
+import { notificacionesRoutes } from './routes/notificaciones.js';
 
 /** Construye la app Fastify (sin escuchar) — reutilizable en tests. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -37,6 +38,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(emprendedorRoutes);
   await app.register(feriasRoutes);
   await app.register(feriasGestionRoutes);
+  await app.register(notificacionesRoutes);
 
   return app;
 }

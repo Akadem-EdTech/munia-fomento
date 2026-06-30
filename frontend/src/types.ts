@@ -68,6 +68,9 @@ export interface DashboardsFerias {
   narrativo: { feriasRealizadas: number; emprendedoresParticipantes: number; ventasReportadas: string[]; publicoEstimado: string[] };
 }
 
+export interface Notificacion { id: string; evento: string; titulo: string; cuerpo: string; leida: boolean; createdAt: string; }
+export interface PlantillaNotif { id: string; evento: string; canal: string; asunto: string; cuerpo: string; activa: boolean; variables: string[]; }
+
 export interface Funcionario {
   id: string;
   nombre: string;
