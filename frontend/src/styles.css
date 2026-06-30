@@ -196,6 +196,37 @@ svg { stroke: currentColor; stroke-width: 2; fill: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .center-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 
+/* PORTAL DEL EMPRENDEDOR */
+.hero { background: linear-gradient(135deg, var(--bg2), var(--bg3)); border: .5px solid var(--border); border-radius: 16px; padding: 1.6rem; margin-bottom: 1.4rem; position: relative; overflow: hidden; }
+.hero::after { content: ''; position: absolute; right: -50px; top: -50px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(33,150,243,.1), transparent 70%); }
+.hero h2 { font-size: 22px; font-weight: 600; letter-spacing: -.4px; }
+.hero .estado { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 12.5px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.rep-num { font-family: 'DM Mono', monospace; font-weight: 600; }
+.prog { height: 9px; background: var(--bg4); border-radius: 5px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--teal-dark), var(--teal-light)); transition: width .4s ease; }
+.prog-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12.5px; }
+.steps { display: flex; flex-direction: column; gap: 2px; }
+.step { display: flex; align-items: center; gap: 11px; padding: 11px; border-radius: 9px; transition: .12s; background: none; border: none; width: 100%; text-align: left; color: inherit; }
+.step:hover { background: var(--bg3); }
+.step-ico { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg4); border: .5px solid var(--border); }
+.step-ico svg { width: 15px; height: 15px; }
+.step.done .step-ico { background: rgba(34,197,94,.13); border-color: transparent; }
+.step.done .step-ico svg { stroke: var(--ok); }
+.step-txt { flex: 1; }
+.step-txt .t { font-size: 13px; font-weight: 500; }
+.step-txt .h { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.step.done .step-txt .t { color: var(--muted); text-decoration: line-through; }
+.ha { display: flex; align-items: center; gap: 12px; padding: 13px 15px; border: .5px solid var(--border); border-radius: 11px; background: var(--bg2); transition: .14s; text-align: left; width: 100%; }
+.ha:hover { border-color: var(--teal); transform: translateY(-1px); }
+.ha-ico { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(33,150,243,.12); }
+.ha-ico svg { width: 19px; height: 19px; stroke: var(--teal-light); }
+.ha-txt .t { font-size: 13.5px; font-weight: 600; }
+.ha-txt .s { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.tag-doc { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 11px; border-radius: 8px; background: var(--bg3); border: .5px solid var(--border); margin: 0 6px 6px 0; }
+.tag-doc button { background: none; border: none; color: var(--muted); display: inline-flex; padding: 0; }
+.tag-doc button:hover { color: var(--bad); }
+.section-t { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin: 1.6rem 0 .8rem; }
+
 /* RESPONSIVE */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }

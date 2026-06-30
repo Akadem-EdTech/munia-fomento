@@ -33,6 +33,8 @@ export function Shell() {
   let titulo = 'Inicio';
   let crumb = 'MunIA Fomento';
   if (admin) { titulo = 'Gestión de usuarios'; crumb = 'Administración del sistema'; }
+  else if (moduloId === 'perfil') { titulo = 'Mi perfil'; crumb = 'Mi cuenta'; }
+  else if (moduloId === 'datos') { titulo = 'Privacidad y mis datos'; crumb = 'Mi cuenta'; }
   else if (modulo) {
     const secs = seccionesDe(modulo, usuario);
     const sec = secs.find((s) => s.key === seccion) ?? secs[0];
@@ -69,6 +71,14 @@ export function Shell() {
             </>
           ) : (
             <>
+              {usuario.tipo === 'EMPRENDEDOR' && (
+                <>
+                  <div className="side-group">Mi cuenta</div>
+                  <NavLink to="/app" end className={({ isActive }) => `side-link ${isActive ? 'on' : ''}`}><Icon name="dash" /> Inicio</NavLink>
+                  <NavLink to="/app/perfil" className={({ isActive }) => `side-link ${isActive ? 'on' : ''}`}><Icon name="user" /> Mi perfil</NavLink>
+                  <NavLink to="/app/datos" className={({ isActive }) => `side-link ${isActive ? 'on' : ''}`}><Icon name="shield" /> Mis datos</NavLink>
+                </>
+              )}
               <div className="side-group">Módulos</div>
               {MODULOS.filter((m) => usuario.tenant.modulosActivos.includes(m.id)).map((m) => {
                 const habil = usuario.tipo === 'EMPRENDEDOR' || !!usuario.funcionario?.modulos.includes(m.id);

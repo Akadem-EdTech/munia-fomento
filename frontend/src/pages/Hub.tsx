@@ -2,14 +2,18 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../auth/auth';
 import { modulosVisibles, seccionesDe } from '../nav';
+import { InicioEmp } from './emprendedor/Inicio';
 
 export function Hub() {
   const { usuario } = useAuth();
   const nav = useNavigate();
   if (!usuario) return null;
 
-  const esEmp = usuario.tipo === 'EMPRENDEDOR';
-  const saludo = esEmp ? `Hola, ${usuario.nombre.split(' ')[0]}` : `Hola, ${usuario.nombre.split(' ')[0]}`;
+  // El emprendedor abre en una home orientada a la acción, no en el perfil.
+  if (usuario.tipo === 'EMPRENDEDOR') return <InicioEmp />;
+
+  const esEmp = false;
+  const saludo = `Hola, ${usuario.nombre.split(' ')[0]}`;
   const visibles = modulosVisibles(usuario);
 
   return (

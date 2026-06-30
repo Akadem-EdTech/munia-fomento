@@ -7,6 +7,8 @@ import { Activar } from './pages/Activar';
 import { Hub } from './pages/Hub';
 import { ModuloSeccion } from './pages/ModuloSeccion';
 import { Usuarios } from './pages/admin/Usuarios';
+import { Perfil } from './pages/emprendedor/Perfil';
+import { MisDatos } from './pages/emprendedor/MisDatos';
 
 function Protegido() {
   const { usuario, cargando } = useAuth();
@@ -35,6 +37,8 @@ export function App() {
         <Route element={<Protegido />}>
           <Route path="/app" element={<Shell />}>
             <Route index element={<Hub />} />
+            <Route path="perfil" element={<Perfil />} />
+            <Route path="datos" element={<MisDatos />} />
             <Route path="admin/usuarios" element={<Usuarios />} />
             <Route path=":modulo/:seccion" element={<ModuloSeccion />} />
           </Route>

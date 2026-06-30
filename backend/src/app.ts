@@ -6,6 +6,7 @@ import { AppError } from './lib/errors.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { usuariosRoutes } from './routes/usuarios.js';
+import { emprendedorRoutes } from './routes/emprendedor.js';
 
 /** Construye la app Fastify (sin escuchar) — reutilizable en tests. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -31,6 +32,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(authRoutes);
   await app.register(usuariosRoutes);
+  await app.register(emprendedorRoutes);
 
   return app;
 }
