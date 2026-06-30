@@ -20,8 +20,8 @@ Construcción por fases siguiendo el orden del brief (§11). Estado actual:
 | 4 | Registro y portal del emprendedor (consentimiento, perfil, ARCO, onboarding) | ✅ Hecho |
 | 5 | Módulo Ferias (formulario híbrido, doble score + perilla, selección, evaluación 3 capas, dashboards) | ✅ Hecho |
 | 6 | Notificaciones por evento + email + plantillas + centro in-app | ✅ Hecho |
-| 7 | Módulo Capacitación | ⏳ Siguiente |
-| 8 | Módulo Fondos (dos puertas, match, ficha, asistente IA con adaptador RAG/mock) | ⬜ |
+| 7 | Módulo Capacitación | ✅ Hecho |
+| 8 | Módulo Fondos (dos puertas, match, ficha, asistente IA con adaptador RAG/mock) | ⏳ Siguiente |
 | 9 | Búsqueda/filtros, estados vacíos, confirmaciones, pulido responsive | ⬜ |
 | 10 | Configuración de tenant (panel municipio) | ⬜ |
 

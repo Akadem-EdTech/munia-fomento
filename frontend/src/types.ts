@@ -68,6 +68,15 @@ export interface DashboardsFerias {
   narrativo: { feriasRealizadas: number; emprendedoresParticipantes: number; ventasReportadas: string[]; publicoEstimado: string[] };
 }
 
+// ── Capacitación ────────────────────────────────────────────────────────
+export interface CursoDisponible { id: string; nombre: string; descripcion: string | null; modalidad: 'PRESENCIAL' | 'ONLINE'; cupos: number; rubro: string | null; inscritos: number; ocupacion: number; miEstado: string | null; }
+export interface MiInscripcion { id: string; estado: string; curso: { nombre: string; modalidad: string; fechaInicio: string | null }; }
+export interface MiCertificado { id: string; emitidoAt: string; curso: { nombre: string; modalidad: string }; }
+export interface CursoGestion { id: string; nombre: string; modalidad: string; cupos: number; rubro: string | null; inscritos: number; certificados: number; sesiones: number; }
+export interface SesionCurso { id: string; titulo: string | null; orden: number; }
+export interface InscritoCurso { emprendedorId: string; nombre: string; emprendimiento: string; estado: string; asistio: number; certificado: boolean; }
+export interface DashboardCapacitacion { cursosDictados: number; emprendedoresFormados: number; certificadosEmitidos: number; tasaAsistencia: number; masDemandados: { nombre: string; inscritos: number; cupos: number }[]; }
+
 export interface Notificacion { id: string; evento: string; titulo: string; cuerpo: string; leida: boolean; createdAt: string; }
 export interface PlantillaNotif { id: string; evento: string; canal: string; asunto: string; cuerpo: string; activa: boolean; variables: string[]; }
 
