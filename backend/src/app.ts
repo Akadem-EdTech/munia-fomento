@@ -7,6 +7,8 @@ import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { usuariosRoutes } from './routes/usuarios.js';
 import { emprendedorRoutes } from './routes/emprendedor.js';
+import { feriasRoutes } from './routes/ferias.js';
+import { feriasGestionRoutes } from './routes/ferias-gestion.js';
 
 /** Construye la app Fastify (sin escuchar) — reutilizable en tests. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -33,6 +35,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authRoutes);
   await app.register(usuariosRoutes);
   await app.register(emprendedorRoutes);
+  await app.register(feriasRoutes);
+  await app.register(feriasGestionRoutes);
 
   return app;
 }

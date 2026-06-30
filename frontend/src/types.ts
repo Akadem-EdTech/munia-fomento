@@ -46,6 +46,28 @@ export interface PerfilEmprendedor {
 export interface SolicitudArco { id: string; tipo: string; estado: string; detalle: string | null; createdAt: string; resueltaAt: string | null; }
 export interface Rubro { id: string; alias: string; color: string; }
 
+// ── Ferias ──────────────────────────────────────────────────────────────
+export interface FeriaAbierta { id: string; nombre: string; objetivo: string | null; fecha: string | null; ubicacion: string | null; cupos: number; criterio: string; rubros: string[]; yaPostulada: string | null; }
+export interface PreguntaFeria { id: string; texto: string; tipo: 'TEXTO' | 'SELECCION' | 'NUMERO' | 'SINO' | 'ADJUNTO'; opciones: string[]; }
+export interface FeriaDetalle { id: string; nombre: string; objetivo: string | null; fecha: string | null; ubicacion: string | null; estado: string; criterio: string; rubros: string[]; preguntas: PreguntaFeria[]; miPostulacion: { id: string; estado: string } | null; }
+export interface MiPostulacion { id: string; feriaId: string; estado: string; scorePropuesta: number; createdAt: string; feria: { nombre: string; fecha: string | null; ubicacion: string | null; estado: string }; }
+export interface FeriaGestion { id: string; nombre: string; estado: string; fecha: string | null; ubicacion: string | null; cupos: number; pesoProp: number; pesoRep: number; postulados: number; rubros: string[]; }
+export interface FilaRanking {
+  postulacionId: string; rank: number; sugerido: 'admitir' | 'lista_espera'; estado: string;
+  total: number; aportePropuesta: number; aporteReputacion: number; scorePropuesta: number;
+  emprendedor: { nombre: string; emprendimiento: string; repScore: number; conf: string; rubro?: string; esNovato: boolean };
+}
+export interface SeleccionData { feria: { id: string; nombre: string; cupos: number; pesoProp: number; pesoRep: number; estado: string }; perilla: { pesoProp: number; pesoRep: number }; ranking: FilaRanking[]; }
+export interface EmprendedorReg { id: string; nombreEmprendimiento: string; repScore: number; feriasCumplidas: number; feriasTotales: number; localidad: string | null; rubro: { alias: string; codigoMaestro: string } | null; usuario: { nombre: string }; }
+export interface ItemCumpl { k: string; txt: string; sub: string; }
+export interface FilaEval { emprendedorId: string; nombre: string; emprendimiento: string; cumplimiento: Record<string, boolean>; calidadEstrellas: number | null; completada: boolean; autoreporte: { participo: boolean; ventas: number | null } | null; }
+export interface EvaluacionData { feria: { id: string; nombre: string; estado: string }; items: ItemCumpl[]; lista: FilaEval[]; progreso: { evaluados: number; totales: number }; }
+export interface DashboardsFerias {
+  operativo: null | { feria: string; postulados: number; admitidos: number; pendientes: number; listaEspera: number; cupos: number; cuposUsadosPct: number };
+  territorialRubro: null | { clave: string; total: number; pct: number }[];
+  narrativo: { feriasRealizadas: number; emprendedoresParticipantes: number; ventasReportadas: string[]; publicoEstimado: string[] };
+}
+
 export interface Funcionario {
   id: string;
   nombre: string;

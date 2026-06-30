@@ -1,18 +1,11 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db.js';
-import { forbidden } from '../lib/errors.js';
 import { auditar } from '../lib/audit.js';
 import { requireAuth, requireAcceso, exigirPrincipal } from '../plugins/auth.js';
 import { soloEmprendedor } from '../auth/access.js';
 import { calcularCompletitud } from '../domain/perfil.js';
-
-/** Garantiza que el principal es un emprendedor y devuelve su id de perfil. */
-function exigirEmprendedor(req: FastifyRequest): { usuarioId: string; tenantId: string; emprendedorId: string } {
-  const p = exigirPrincipal(req);
-  if (p.tipo !== 'EMPRENDEDOR' || !p.emprendedorId) throw forbidden('Sección sólo para emprendedores');
-  return { usuarioId: p.usuarioId, tenantId: p.tenantId, emprendedorId: p.emprendedorId };
-}
+import { exigirEmprendedor } from '../lib/actores.js';
 
 const perfilSchema = z.object({
   nombreEmprendimiento: z.string().min(2).optional(),

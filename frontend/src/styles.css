@@ -227,6 +227,35 @@ svg { stroke: currentColor; stroke-width: 2; fill: none; }
 .tag-doc button:hover { color: var(--bad); }
 .section-t { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; margin: 1.6rem 0 .8rem; }
 
+/* FERIAS — perilla, ranking, estrellas, evaluación */
+.perilla { background: var(--bg3); border: .5px solid var(--border); border-radius: 12px; padding: 1.1rem 1.3rem; }
+.perilla-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 9px; }
+.perilla input[type=range] { width: 100%; accent-color: var(--teal); height: 6px; }
+.perilla-vals { display: flex; justify-content: space-between; margin-top: 8px; font-family: 'DM Mono', monospace; font-size: 12px; }
+.rank-row { display: grid; grid-template-columns: 34px 1fr 130px 120px; align-items: center; gap: 12px; padding: 11px 12px; border-bottom: .5px solid var(--border-soft); }
+.rank-row:last-child { border-bottom: none; }
+.rank-row.corte { border-top: 1.5px dashed var(--warn); position: relative; }
+.rank-num { font-family: 'DM Mono', monospace; font-weight: 600; color: var(--muted); text-align: center; }
+.rank-num.in { color: var(--teal-light); }
+.score-stack { height: 10px; border-radius: 5px; overflow: hidden; display: flex; background: var(--bg4); }
+.score-prop { background: linear-gradient(90deg, var(--teal-dark), var(--teal-light)); }
+.score-rep { background: linear-gradient(90deg, #1B4F72, #2E86AB); }
+.score-legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.score-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.stars { display: inline-flex; gap: 3px; }
+.star { width: 20px; height: 20px; cursor: pointer; stroke: var(--muted); }
+.star.on { fill: var(--amber); stroke: var(--amber); }
+.check-item { display: flex; align-items: center; gap: 12px; padding: 13px; border: .5px solid var(--border); border-radius: 11px; margin-bottom: 8px; background: var(--bg2); cursor: pointer; transition: .12s; }
+.check-item:hover { border-color: var(--teal); }
+.check-box { width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: .12s; }
+.check-box svg { width: 16px; height: 16px; opacity: 0; }
+.check-item.on .check-box { background: var(--ok); border-color: var(--ok); }
+.check-item.on .check-box svg { opacity: 1; stroke: #fff; }
+.eval-emp { display: flex; align-items: center; gap: 11px; padding: 13px; border: .5px solid var(--border); border-radius: 12px; background: var(--bg2); margin-bottom: 9px; }
+.kpi-big { font-family: 'DM Mono', monospace; font-size: 40px; font-weight: 700; letter-spacing: -1.5px; line-height: 1; }
+.dash-narr { background: linear-gradient(135deg, #0D1117, #161F30); border: .5px solid var(--border); border-radius: 16px; padding: 1.8rem; }
+
 /* RESPONSIVE */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
