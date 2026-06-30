@@ -16,8 +16,8 @@ Construcción por fases siguiendo el orden del brief (§11). Estado actual:
 |---|------|--------|
 | 1 | Modelo de datos multi-tenant + migraciones + seed genérico | ✅ Hecho |
 | 2 | Auth (ClaveÚnica + fallback) + roles + control de acceso rol × módulo + gestión de usuarios | ✅ Hecho |
-| 3 | Shell de navegación (hub, sidebar contextual, topbar) | ⏳ Siguiente |
-| 4 | Registro y portal del emprendedor (consentimiento, perfil, ARCO, onboarding) | ⬜ |
+| 3 | Shell de navegación (hub, sidebar contextual, topbar) | ✅ Hecho |
+| 4 | Registro y portal del emprendedor (consentimiento, perfil, ARCO, onboarding) | ⏳ Siguiente |
 | 5 | Módulo Ferias (formulario híbrido, doble score + perilla, selección, evaluación 3 capas, dashboards) | ⬜ |
 | 6 | Notificaciones por evento + email + plantillas + centro in-app | ⬜ |
 | 7 | Módulo Capacitación | ⬜ |
@@ -36,7 +36,8 @@ munia-fomento/
 │   │   ├── schema.prisma   ← modelo de datos multi-tenant (26 tablas)
 │   │   └── seed.ts         ← datos semilla GENÉRICOS (tenant "demo")
 │   └── src/                código de la API (servicios, rutas, adaptadores)
-├── frontend/           SPA (Vite + React + TypeScript)  — fase 3
+├── frontend/           SPA (Vite + React + TypeScript)
+│   └── src/                shell, login diferenciado, hub, navegación espejo, gestión usuarios
 ├── reference/          prototipo HTML + brief (especificación viva)
 └── docker-compose.yml  PostgreSQL para desarrollo
 ```
