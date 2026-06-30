@@ -77,6 +77,24 @@ export interface SesionCurso { id: string; titulo: string | null; orden: number;
 export interface InscritoCurso { emprendedorId: string; nombre: string; emprendimiento: string; estado: string; asistio: number; certificado: boolean; }
 export interface DashboardCapacitacion { cursosDictados: number; emprendedoresFormados: number; certificadosEmitidos: number; tasaAsistencia: number; masDemandados: { nombre: string; inscritos: number; cupos: number }[]; }
 
+// ── Fondos ──────────────────────────────────────────────────────────────
+export interface FondoLista { id: string; nombre: string; organismo: string; origen: string; descripcion: string | null; montoMax: number | null; compatibilidad: 'alta' | 'media'; diasRestantes: number | null; }
+export interface RequisitoCheck { clave: string; etiqueta: string; cumple: boolean | null; }
+export interface FichaFondo {
+  id: string; nombre: string; organismo: string; origen: string; descripcion: string | null;
+  montoMax: number | null; moneda: string; diasRestantes: number | null; compatibilidad: 'alta' | 'media' | 'no';
+  requisitos: RequisitoCheck[]; requisitosCumplidos: number; requisitosVerificables: number;
+  faq: { pregunta: string; respuesta: string }[]; miPostulacion: string | null;
+}
+export interface RespuestaAsistente { respuesta: string; fondoSugerido: { id: string; nombre: string } | null; }
+export interface MiPostulacionFondo { id: string; estado: string; fondo: { nombre: string; organismo: string }; }
+export interface FondoGestion { id: string; nombre: string; organismo: string; origen: string; estado: string; montoMax: number | null; fechaCierre: string | null; postulaciones: number; }
+export interface PostulacionFondoEval {
+  id: string; estado: string; proyecto: string | null; montoSolicitado: number | null;
+  emprendedor: { nombre: string; emprendimiento: string; rubro?: string; repScore: number; esNovato: boolean; ferias: string; certificados: number; cursos: number };
+}
+export interface DashboardFondos { fondosEntregados: number; emprendedoresApoyados: number; postulaciones: number; distribucionRubro: { clave: string; total: number }[]; }
+
 export interface Notificacion { id: string; evento: string; titulo: string; cuerpo: string; leida: boolean; createdAt: string; }
 export interface PlantillaNotif { id: string; evento: string; canal: string; asunto: string; cuerpo: string; activa: boolean; variables: string[]; }
 

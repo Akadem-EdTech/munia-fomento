@@ -11,6 +11,8 @@ import { feriasRoutes } from './routes/ferias.js';
 import { feriasGestionRoutes } from './routes/ferias-gestion.js';
 import { notificacionesRoutes } from './routes/notificaciones.js';
 import { capacitacionRoutes } from './routes/capacitacion.js';
+import { fondosRoutes } from './routes/fondos.js';
+import { fondosGestionRoutes } from './routes/fondos-gestion.js';
 
 /** Construye la app Fastify (sin escuchar) — reutilizable en tests. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -41,6 +43,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(feriasGestionRoutes);
   await app.register(notificacionesRoutes);
   await app.register(capacitacionRoutes);
+  await app.register(fondosRoutes);
+  await app.register(fondosGestionRoutes);
 
   return app;
 }

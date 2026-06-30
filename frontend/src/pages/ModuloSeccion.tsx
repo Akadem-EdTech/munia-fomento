@@ -15,13 +15,18 @@ import { MisInscripciones, MisCertificados } from './capacitacion/MisCursos';
 import { CursosGestion } from './capacitacion/CursosGestion';
 import { Inscritos, Asistencia } from './capacitacion/Asistencia';
 import { DashboardFormacion } from './capacitacion/DashboardFormacion';
+import { Descubrir } from './fondos/Descubrir';
+import { Asistente } from './fondos/Asistente';
+import { MisPostulacionesFondo } from './fondos/MisPostulaciones';
+import { Convocatorias, EvaluarFondos, DashboardFondos } from './fondos/Gestion';
 
-// Despacho de secciones a vistas reales. Ferias (5) y Capacitación (7) completos;
-// Fondos (8) cae al placeholder hasta su fase.
+// Despacho de secciones a vistas reales. Ferias (5), Capacitación (7) y Fondos (8) completos.
 const FERIAS_EMP: Record<string, () => JSX.Element> = { abiertas: FeriasAbiertas, postulaciones: MisPostulaciones, reportar: Reportar };
 const FERIAS_MUNI: Record<string, () => JSX.Element> = { panel: Dashboards, ferias: FeriasGestion, seleccion: Seleccion, emprendedores: Emprendedores, evaluacion: Evaluacion, dashboards: Dashboards };
 const CAP_EMP: Record<string, () => JSX.Element> = { cursos: CursosDisponibles, inscripciones: MisInscripciones, certificados: MisCertificados };
 const CAP_MUNI: Record<string, () => JSX.Element> = { cursos: CursosGestion, inscripciones: Inscritos, asistencia: Asistencia, dashboard: DashboardFormacion };
+const FON_EMP: Record<string, () => JSX.Element> = { descubrir: Descubrir, asistente: Asistente, postulaciones: MisPostulacionesFondo };
+const FON_MUNI: Record<string, () => JSX.Element> = { convocatorias: Convocatorias, evaluar: EvaluarFondos, adjudicacion: EvaluarFondos, dashboard: DashboardFondos };
 
 export function ModuloSeccion() {
   const { modulo: moduloId, seccion } = useParams();
@@ -38,10 +43,14 @@ export function ModuloSeccion() {
     const Vista = (esEmp ? CAP_EMP : CAP_MUNI)[seccion];
     if (Vista) return <Vista />;
   }
+  if (modulo.id === 'FONDOS' && seccion) {
+    const Vista = (esEmp ? FON_EMP : FON_MUNI)[seccion];
+    if (Vista) return <Vista />;
+  }
 
   const secs = seccionesDe(modulo, usuario);
   const sec = secs.find((s) => s.key === seccion) ?? secs[0];
-  const fase = 8;
+  const fase = 9;
   return (
     <div className="card">
       <div className="card-h"><div className="ico"><Icon name={sec.icon} /></div><h3>{sec.label}</h3><span className="chip c-mute" style={{ marginLeft: 'auto' }}>{modulo.label}</span></div>
