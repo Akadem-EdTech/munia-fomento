@@ -13,6 +13,7 @@ import { notificacionesRoutes } from './routes/notificaciones.js';
 import { capacitacionRoutes } from './routes/capacitacion.js';
 import { fondosRoutes } from './routes/fondos.js';
 import { fondosGestionRoutes } from './routes/fondos-gestion.js';
+import { tenantRoutes } from './routes/tenant.js';
 
 /** Construye la app Fastify (sin escuchar) — reutilizable en tests. */
 export async function buildApp(): Promise<FastifyInstance> {
@@ -45,6 +46,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(capacitacionRoutes);
   await app.register(fondosRoutes);
   await app.register(fondosGestionRoutes);
+  await app.register(tenantRoutes);
 
   return app;
 }

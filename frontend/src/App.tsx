@@ -8,6 +8,7 @@ import { Hub } from './pages/Hub';
 import { ModuloSeccion } from './pages/ModuloSeccion';
 import { Usuarios } from './pages/admin/Usuarios';
 import { Plantillas } from './pages/admin/Plantillas';
+import { ConfigTenant } from './pages/admin/ConfigTenant';
 import { Perfil } from './pages/emprendedor/Perfil';
 import { MisDatos } from './pages/emprendedor/MisDatos';
 
@@ -42,6 +43,7 @@ export function App() {
             <Route path="datos" element={<MisDatos />} />
             <Route path="admin/usuarios" element={<Usuarios />} />
             <Route path="admin/plantillas" element={<Plantillas />} />
+            <Route path="admin/config" element={<ConfigTenant />} />
             <Route path=":modulo/:seccion" element={<ModuloSeccion />} />
           </Route>
         </Route>

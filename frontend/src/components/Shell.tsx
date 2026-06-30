@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from './Icon';
@@ -44,6 +44,14 @@ export function Shell() {
     if (abrir && (notif?.noLeidas ?? 0) > 0) leerTodas.mutate();
   };
 
+  // El acento de marca del municipio (config) sobrescribe el azul por defecto.
+  useEffect(() => {
+    const accent = usuario?.tenant.colorAccent;
+    const root = document.documentElement;
+    if (accent) { root.style.setProperty('--teal', accent); root.style.setProperty('--teal-light', accent); }
+    else { root.style.removeProperty('--teal'); root.style.removeProperty('--teal-light'); }
+  }, [usuario?.tenant.colorAccent]);
+
   if (!usuario) return null;
   const { admin, moduloId, seccion } = parseLoc(loc.pathname);
   const modulo = moduloId ? getModulo(moduloId) : undefined;
@@ -57,7 +65,7 @@ export function Shell() {
   // Título + breadcrumb contextual
   let titulo = 'Inicio';
   let crumb = 'MunIA Fomento';
-  if (admin) { titulo = seccion === 'plantillas' ? 'Plantillas de notificación' : 'Gestión de usuarios'; crumb = 'Administración del sistema'; }
+  if (admin) { titulo = seccion === 'plantillas' ? 'Plantillas de notificación' : seccion === 'config' ? 'Configuración del municipio' : 'Gestión de usuarios'; crumb = 'Administración del sistema'; }
   else if (moduloId === 'perfil') { titulo = 'Mi perfil'; crumb = 'Mi cuenta'; }
   else if (moduloId === 'datos') { titulo = 'Privacidad y mis datos'; crumb = 'Mi cuenta'; }
   else if (modulo) {
@@ -122,6 +130,9 @@ export function Shell() {
                   </NavLink>
                   <NavLink to="/app/admin/plantillas" className={({ isActive }) => `side-link ${isActive ? 'on' : ''}`}>
                     <Icon name="bell" /> Plantillas
+                  </NavLink>
+                  <NavLink to="/app/admin/config" className={({ isActive }) => `side-link ${isActive ? 'on' : ''}`}>
+                    <Icon name="settings" /> Configuración
                   </NavLink>
                 </>
               )}

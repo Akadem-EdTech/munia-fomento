@@ -97,6 +97,7 @@ export interface DashboardFondos { fondosEntregados: number; emprendedoresApoyad
 
 export interface Notificacion { id: string; evento: string; titulo: string; cuerpo: string; leida: boolean; createdAt: string; }
 export interface PlantillaNotif { id: string; evento: string; canal: string; asunto: string; cuerpo: string; activa: boolean; variables: string[]; }
+export interface TenantConfig { slug: string; nombre: string; logoUrl: string | null; colorAccent: string | null; dominioCorreo: string | null; modulosActivos: Modulo[]; consentVersion?: string; }
 
 export interface Funcionario {
   id: string;

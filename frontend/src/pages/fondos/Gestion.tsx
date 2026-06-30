@@ -72,12 +72,13 @@ export function EvaluarFondos() {
   const qc = useQueryClient();
   const { data: fondos } = useQuery({ queryKey: ['gestion-fondos'], queryFn: () => api.get<{ fondos: FondoGestion[] }>('/api/gestion/fondos') });
   const [fondoId, setFondoId] = useState<string | null>(null);
+  const [rechazar, setRechazar] = useState<PostulacionFondoEval | null>(null);
   const lista = fondos?.fondos ?? [];
   const activo = fondoId ?? lista[0]?.id ?? null;
   const { data } = useQuery({ queryKey: ['eval-fondo', activo], queryFn: () => api.get<{ postulaciones: PostulacionFondoEval[] }>(`/api/gestion/fondos/${activo}/postulaciones`), enabled: !!activo });
   const decidir = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: string }) => api.post(`/api/gestion/postulaciones-fondo/${id}/decidir`, { decision }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['eval-fondo', activo] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['eval-fondo', activo] }); setRechazar(null); },
   });
   if (!lista.length) return <div className="empty"><Icon name="money" /><h4>No hay convocatorias</h4></div>;
   return (
@@ -106,11 +107,23 @@ export function EvaluarFondos() {
           {(p.estado === 'POSTULADA' || p.estado === 'EN_EVALUACION') && (
             <div style={{ display: 'flex', gap: 8, paddingLeft: 42 }}>
               <button className="btn-p btn-sm" style={{ background: 'var(--mod-fondos)', color: '#0b1a0f' }} onClick={() => decidir.mutate({ id: p.id, decision: 'ADJUDICADA' })}><Icon name="award" /> Adjudicar</button>
-              <button className="btn-g btn-sm" onClick={() => decidir.mutate({ id: p.id, decision: 'RECHAZADA' })}>Rechazar</button>
+              <button className="btn-g btn-sm" onClick={() => setRechazar(p)}>Rechazar</button>
             </div>
           )}
         </div>
       ))}
+      {rechazar && (
+        <div className="modal-bg" onClick={() => setRechazar(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Rechazar postulación</h3>
+            <p className="ent-sub" style={{ marginTop: 6 }}>{rechazar.emprendedor.emprendimiento} no será adjudicado en esta convocatoria. La decisión queda registrada.</p>
+            <div className="modal-actions">
+              <button className="btn-g" onClick={() => setRechazar(null)}>Cancelar</button>
+              <button className="btn-p" style={{ background: 'var(--bad)' }} disabled={decidir.isPending} onClick={() => decidir.mutate({ id: rechazar.id, decision: 'RECHAZADA' })}>{decidir.isPending ? <span className="spinner" /> : 'Rechazar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
