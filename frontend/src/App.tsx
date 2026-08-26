@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from './auth/auth';
 import { Shell } from './components/Shell';
 import { Login } from './pages/Login';
@@ -26,9 +26,13 @@ function SoloPublico() {
   return <Outlet />;
 }
 
+// En la demo estática (GitHub Pages) usamos HashRouter para que los enlaces
+// profundos funcionen sin reescrituras de servidor.
+const Router = import.meta.env.VITE_DEMO === 'true' ? HashRouter : BrowserRouter;
+
 export function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route element={<SoloPublico />}>
           <Route path="/login" element={<Login />} />
@@ -50,6 +54,6 @@ export function App() {
 
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }

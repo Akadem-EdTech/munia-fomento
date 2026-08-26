@@ -1,11 +1,13 @@
-/** Cliente HTTP mínimo. Cookies de sesión same-origin (proxy de Vite). */
-export class ApiError extends Error {
-  constructor(public status: number, message: string, public code?: string, public detalles?: unknown) {
-    super(message);
-  }
-}
+import { ApiError } from './ApiError';
+import { mockRequest, mockUpload } from './mock';
+
+export { ApiError };
+
+// Build de demo (GitHub Pages): sin backend, todo corre contra un mock en memoria.
+const DEMO = import.meta.env.VITE_DEMO === 'true';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
+  if (DEMO) return mockRequest<T>(method, url, body);
   const res = await fetch(url, {
     method,
     credentials: 'include',
@@ -21,6 +23,7 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
 }
 
 async function upload<T>(url: string, file: File): Promise<T> {
+  if (DEMO) return mockUpload<T>(url, file);
   const fd = new FormData();
   fd.append('file', file);
   const res = await fetch(url, { method: 'POST', credentials: 'include', body: fd });

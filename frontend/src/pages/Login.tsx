@@ -16,11 +16,12 @@ export function Login() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
-  const enviar = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const demo = import.meta.env.VITE_DEMO === 'true';
+
+  const ingresar = async (correo: string, clave: string) => {
     setError(''); setCargando(true);
     try {
-      await api.post('/api/auth/login', { email, password });
+      await api.post('/api/auth/login', { email: correo, password: clave });
       refrescar();
       nav('/app');
     } catch (err) {
@@ -29,6 +30,15 @@ export function Login() {
       setCargando(false);
     }
   };
+  const enviar = (e: React.FormEvent) => { e.preventDefault(); void ingresar(email, password); };
+
+  const DEMO_ROLES = [
+    { label: 'Administradora', sub: 'Daniela · todos los módulos', email: 'admin@municipio.demo.cl' },
+    { label: 'Evaluadora', sub: 'Claudia · Ferias', email: 'evaluador@municipio.demo.cl' },
+    { label: 'Jefatura', sub: 'Sergio · sólo dashboards', email: 'jefatura@municipio.demo.cl' },
+    { label: 'Emprendedora', sub: 'María · con historial', email: 'maria.fuentes@example.cl' },
+    { label: 'Emprendedor nuevo', sub: 'Roberto · sin historial', email: 'roberto.diaz@example.cl' },
+  ];
 
   return (
     <div className="auth-wrap">
@@ -40,6 +50,22 @@ export function Login() {
         <div className="auth-sub">{modoFuncionario ? 'Acceso funcionarios municipales' : 'Portal del emprendedor'}</div>
 
         {error && <div className="alert alert-bad" style={{ marginBottom: '1rem' }}><Icon name="info" />{error}</div>}
+
+        {demo && (
+          <div style={{ marginBottom: '1.4rem' }}>
+            <div className="alert alert-info" style={{ marginBottom: 12 }}><Icon name="sparkle" />Demo interactiva · datos de ejemplo en tu navegador (no persisten). Entra con un clic:</div>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {DEMO_ROLES.map((r) => (
+                <button key={r.email} className="step" disabled={cargando} onClick={() => ingresar(r.email, 'demo1234')} style={{ border: '.5px solid var(--border)' }}>
+                  <div className="step-ico"><Icon name={r.email.includes('example') ? 'empr' : 'user'} /></div>
+                  <div className="step-txt"><div className="t">{r.label}</div><div className="h">{r.sub}</div></div>
+                  <Icon name="back" style={{ transform: 'rotate(180deg)', stroke: 'var(--muted)' }} />
+                </button>
+              ))}
+            </div>
+            <div className="divider">o con correo y contraseña (demo1234)</div>
+          </div>
+        )}
 
         {claveUnica && (
           <>
